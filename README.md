@@ -32,7 +32,7 @@ $ python
 
 >>> import nltk
 >>> nltk.download("all")
->>> exit() # after download is complete, exit python
+>>>  # after download is complete, exit python
 ```
 
 Run project:

@@ -15,6 +15,7 @@ from typing import Tuple
 import nltk
 import numpy as np
 from nltk.corpus import wordnet as wn
+from typing import List, Dict, Tuple
 
 
 class ObjectiveTest:
@@ -34,33 +35,26 @@ class ObjectiveTest:
 		except FileNotFoundError:
 			logging.exception("Corpus file not found.", exc_info=True)
 
-	def generate_test(self, num_questions: int = 3) -> Tuple[list, list]:
-		"""Method to generate an objective test.
+	def generate_test(self, question_list: List[Dict], num_questions: int = 3) -> Tuple[list, list]:
+			if not question_list:
+				return [], []  # Return empty lists if no question list provided
 
-		Args:
-			num_questions (int, optional): Number of questions in a test.
-				Defaults to 3.
+			# Identify potential question answers
+			question_answers = [question_set for question_set in question_list if question_set["Key"] > 3]
 
-		Returns:
-			Tuple[list, list]: Questions and answer options respectively.
-		"""
-		# Identify potential question sets
-		question_sets = self.get_question_sets()
+			# Check if question_answers is empty
+			if not question_answers:
+				return [], []  # Return empty lists if no question answers
 
-		# Identify potential question answers
-		question_answers = list()
-		for question_set in question_sets:
-			if question_set["Key"] > 3:
-				question_answers.append(question_set)
-
-		# Create objective test set
-		questions, answers = list(), list()
-		while len(questions) < num_questions:
-			rand_num = np.random.randint(0, len(question_answers))
-			if question_answers[rand_num]["Question"] not in questions:
-				questions.append(question_answers[rand_num]["Question"])
-				answers.append(question_answers[rand_num]["Answer"])
-		return questions, answers
+			# Create objective test set
+			questions, answers = list(), list()
+			while len(questions) < num_questions and question_answers:
+				rand_num = np.random.randint(0, len(question_answers))
+				if question_answers[rand_num]["Question"] not in questions:
+					questions.append(question_answers[rand_num]["Question"])
+					answers.append(question_answers[rand_num]["Answer"])
+					question_answers.pop(rand_num)  # Remove used question to avoid infinite loop
+			return questions, answers
 
 	def get_question_sets(self) -> list:
 		"""Method to dentify sentences with potential objective questions.
@@ -96,6 +90,9 @@ class ObjectiveTest:
 			dict: Question formed along with the correct answer in case of
 				potential sentence else return None.
 		"""
+		# POS tag sequences
+		tags = []
+
 		# POS tag sequences
 		try:
 			tags = nltk.pos_tag(sentence)
@@ -140,10 +137,15 @@ class ObjectiveTest:
 					# Blank out the last two words in this phrase
 					[replace_nouns.append(phrase_word) for phrase_word in phrase.split()[-2:]]
 					break
+
 			# If we couldn't find the word in any phrases
 			if len(replace_nouns) == 0:
 				replace_nouns.append(word)
 			break
+
+		# Check if the list is not empty and generate the random number	
+		if replace_nouns:  
+			rand_num = np.random.randint(0, len(replace_nouns))
 
 		if len(replace_nouns) == 0:
 			return None

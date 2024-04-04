@@ -24,6 +24,7 @@ from src.objective import ObjectiveTest
 from src.subjective import SubjectiveTest
 from src.utils import backup, relative_ranking
 
+
 # Placeholders
 global_answers = list()
 
@@ -60,10 +61,16 @@ def form():
         username=session["username"]
     )
 
-
 @app.route("/generate_test", methods=["GET", "POST"])
 def generate_test():
-    session["subject_id"] = request.form["subject_id"]
+    # Check if 'subject_id' is in the form data
+    if "subject_id" in request.form:
+        session["subject_id"] = request.form["subject_id"]
+    else:
+        # Handle the case where 'subject_id' is not provided
+        # For example, you can return an error response
+        return "Error: 'subject_id' not provided in form data", 400
+
     if session["subject_id"] == "0":
         session["subject_name"] = "SOFTWARE ENGINEERING"
         session["filepath"] = os.path.join(str(os.getcwd()), "corpus", "software-testing.txt")
@@ -80,30 +87,51 @@ def generate_test():
         session["subject_name"] = "CUSTOM"
     else:
         print("Done!")
-    session["test_id"] = request.form["test_id"]
+
+    # Check if 'test_id' is in the form data
+    if "test_id" in request.form:
+        session["test_id"] = request.form["test_id"]
+    else:
+        # Handle the case where 'test_id' is not provided
+        # For example, you can return an error response
+        return "Error: 'test_id' not provided in form data", 400
 
     if session["test_id"] == "0":
         # Generate objective test
         objective_generator = ObjectiveTest(session["filepath"])
-        question_list, answer_list = objective_generator.generate_test()
-        for ans in answer_list:
+        
+        # Get the question list from the generator
+        question_list = objective_generator.get_question_sets()
+
+        # Generate test using the obtained question list
+        questions, answers = objective_generator.generate_test(question_list)
+        
+        # Store answers
+        for ans in answers:
             global_answers.append(ans)
 
+        # Pass questions to the template
         return render_template(
             "objective_test.html",
             username=session["username"],
             testname=session["subject_name"],
-            question1=question_list[0],
-            question2=question_list[1],
-            question3=question_list[2]
+            question1=questions[0] if len(questions) > 0 else "",
+            question2=questions[1] if len(questions) > 1 else "",
+            question3=questions[2] if len(questions) > 2 else ""
         )
+
     elif session["test_id"] == "1":
         # Generate subjective test
         subjective_generator = SubjectiveTest(session["filepath"])
+        
+        # Generate test
         question_list, answer_list = subjective_generator.generate_test(num_questions=2)
+        
+        # Store answers
         for ans in answer_list:
             global_answers.append(ans)
 
+        # Pass questions to the template
         return render_template(
             "subjective_test.html",
             username=session["username"],
@@ -114,6 +142,7 @@ def generate_test():
     else:
         print("Done!")
         return None
+
 
 
 @ app.route("/output", methods=["GET", "POST"])
