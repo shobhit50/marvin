@@ -171,7 +171,7 @@ def output():
     if session["test_id"] == "0":
         # Evaluate objective answer
         for i, _ in enumerate(user_ans):
-            if user_ans[i] == default_ans[i]:
+            if i < len(default_ans) and user_ans[i] == default_ans[i]:
                 total_score += 100
         total_score /= 3
         total_score = round(total_score, 3)
